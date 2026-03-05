@@ -1,49 +1,46 @@
 package com.hmdp.intercepter;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.util.StrUtil;
 import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.User;
 import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
 import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
 
-/*
-
-登录拦截器
-校验登陆状态
-
-auth:lxl
- */
-public class LoginInterceptor implements HandlerInterceptor {
-
+public class RefreshTokenInterceptor implements HandlerInterceptor {
     private StringRedisTemplate stringRedisTemplate;
 
-    public LoginInterceptor(StringRedisTemplate stringRedisTemplate){
+    public RefreshTokenInterceptor(StringRedisTemplate stringRedisTemplate){
         this.stringRedisTemplate=stringRedisTemplate;
     }
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-    UserHolder.removeUser();
-    }
-
-    @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-
-        if(UserHolder.getUser()==null){
-            response.setStatus(401);
-            return false;
+      //获取token
+        String token = request.getHeader("authorization");
+        //查询用户
+        if(token==null){
+            return true;
         }
-        //放行
+
+        Map<Object, Object> map = stringRedisTemplate.opsForHash().entries(LOGIN_USER_KEY + token);
+        if(map.isEmpty()){
+            return true;
+        }
+        UserDTO userDTO = BeanUtil.fillBeanWithMap(map, new UserDTO(), true);
+
+        //保存到threadLocal
+        UserHolder.saveUser(userDTO);
+        //更新token
+        stringRedisTemplate.expire(LOGIN_USER_KEY + token,LOGIN_USER_TTL, TimeUnit.SECONDS);
+
         return true;
     }
 }

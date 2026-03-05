@@ -2,6 +2,7 @@ package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.util.PhoneUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -50,7 +51,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     public Result sendCode(String phone, HttpSession session) {
         //校验手机号
         boolean phoneInvalid = RegexUtils.isPhoneInvalid(phone);
-
         if(phoneInvalid){
             return Result.fail("手机号不合法,请输入正确的手机号");
         }
@@ -113,9 +113,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     private User createUserWithPhone(String phone) {
         //创建用户
-        User user=new User();
-        user.setPhone(phone);
-        user.setNickName(USER_NICK_NAME_PREFIX+RandomUtil.randomString(10));
+        User user = User.builder().phone(phone)
+                .nickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10))
+                .build();
         save(user);
         return user;
     }
